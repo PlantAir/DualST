@@ -1,4 +1,3 @@
-# DualST
 # PyTorch implementation of DualST: Dual-track Spatio-temporal Learning for Urban Flow Prediction with Adaptive Normalization
 
 
