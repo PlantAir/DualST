@@ -5,6 +5,7 @@ from models.ModelConfiguration import ModelConfigurationTaxiBJ, ModelConfigurati
 from models.layer.gse import GlobalSemanticEncoder
 from models.layer.stnorm import STnorm
 from models.layer.conv import LayerNorm,Block
+from models.layer.iTransformer import iTransformer
 import numpy as np
 
 class TemporalCausalityBlock(nn.Module):
@@ -149,7 +150,6 @@ class DualST(nn.Module):
         X_ext_p = X_ext[:,self.dconf.len_close:,:]
 
         gse_output_c = self.gse_c(inputs_c,return_attn=True)[0]
-
         gse_output_p = self.gse_p(inputs_p,return_attn=True)[0]
 
         logit_scale = self.logit_scale.exp()
@@ -178,7 +178,7 @@ class DualST(nn.Module):
         res_temporal = self.transformer_encoder(transformer_inputs)
         transformer_outputs = res_temporal + transformer_inputs
         transformer_outputs = transformer_outputs.transpose(0,1)
-
+        
         out = torch.flatten(transformer_outputs, 1)
         out = self.FC(out)
         main_out_c = out.reshape(-1, self.dconf.dim_flow, self.dconf.dim_h, self.dconf.dim_w)
