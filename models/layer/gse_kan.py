@@ -16,6 +16,7 @@ import torch.utils.checkpoint as checkpoint
 from einops import rearrange
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 from models.layer.stnorm import STnorm
+from .kan import MoKLayer
 
 class Result:
 
@@ -81,9 +82,9 @@ class Mlp(nn.Module):
         super().__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
-        self.fc1 = nn.Linear(in_features, hidden_features)
+        self.fc1 = MoKLayer(in_features, hidden_features)
         self.act = act_layer()
-        self.fc2 = nn.Linear(hidden_features, out_features)
+        self.fc2 = MoKLayer(hidden_features, out_features)
         self.drop = nn.Dropout(drop)
 
     def forward(self, x):
@@ -150,11 +151,11 @@ class AssignAttention(nn.Module):
         head_dim = dim // num_heads
         self.scale = qk_scale or head_dim**-0.5
 
-        self.q_proj = nn.Linear(dim, dim, bias=qkv_bias)
-        self.k_proj = nn.Linear(dim, dim, bias=qkv_bias)
-        self.v_proj = nn.Linear(dim, dim, bias=qkv_bias)
+        self.q_proj = MoKLayer(dim, dim, bias=qkv_bias)
+        self.k_proj = MoKLayer(dim, dim, bias=qkv_bias)
+        self.v_proj = MoKLayer(dim, dim, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
-        self.proj = nn.Linear(dim, dim)
+        self.proj = MoKLayer(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
         self.hard = hard
         self.gumbel = gumbel
@@ -352,13 +353,13 @@ class Attention(nn.Module):
         self.qkv_fuse = qkv_fuse
 
         if qkv_fuse:
-            self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
+            self.qkv = MoKLayer(dim, dim * 3, bias=qkv_bias)
         else:
-            self.q_proj = nn.Linear(dim, dim, bias=qkv_bias)
-            self.k_proj = nn.Linear(dim, dim, bias=qkv_bias)
-            self.v_proj = nn.Linear(dim, dim, bias=qkv_bias)
+            self.q_proj = MoKLayer(dim, dim, bias=qkv_bias)
+            self.k_proj = MoKLayer(dim, dim, bias=qkv_bias)
+            self.v_proj = MoKLayer(dim, dim, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
-        self.proj = nn.Linear(dim, out_dim)
+        self.proj = MoKLayer(dim, out_dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
     def extra_repr(self):
@@ -741,7 +742,7 @@ class GlobalSemanticEncoder(nn.Module):
                 zero_init_group_token=group_projector is not None)
 
         self.norm = norm_layer(self.num_features)
-        self.head = nn.Linear(self.num_features, embed_dim)
+        self.head = MoKLayer(self.num_features, embed_dim)
 
         self.apply(self._init_weights)
 
